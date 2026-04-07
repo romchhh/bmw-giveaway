@@ -13,6 +13,8 @@ import { notifyAdminsNewPayment } from "@/lib/notify-admins-payment";
 import { notifyUserPaymentSuccess } from "@/lib/notify-user-payment";
 import { getTicketPriceUsd } from "@/lib/giveaway-price";
 
+export const runtime = "nodejs";
+
 export async function POST(request: Request) {
   if (process.env.PAYMENT_TEST_MODE !== "true") {
     return Response.json({ error: "test_disabled" }, { status: 403 });
@@ -60,21 +62,28 @@ export async function POST(request: Request) {
   if (!result.ok) {
     return Response.json({ error: result.error }, { status: result.status });
   }
-  if (process.env.ADMIN_NOTIFY_TEST_PAYMENTS === "true") {
-    const amountUsd = quantity * getTicketPriceUsd();
-    void notifyAdminsNewPayment(getGiveawayDb(), {
+
+  const amountUsd = quantity * getTicketPriceUsd();
+  const settled = await Promise.allSettled([
+    notifyAdminsNewPayment(db, {
       provider: "test",
       userId,
       quantity,
       amountUsd,
       orderReference: orderRef,
-    }).catch((e) => console.error("[test-purchase] admin notify", e));
-  }
-  void notifyUserPaymentSuccess({
-    userId,
-    tickets: result.tickets,
-    orderReference: orderRef,
-    provider: "test",
-  }).catch((e) => console.error("[test-purchase] user notify", e));
+    }),
+    notifyUserPaymentSuccess({
+      userId,
+      tickets: result.tickets,
+      orderReference: orderRef,
+      provider: "test",
+    }),
+  ]);
+  settled.forEach((r, i) => {
+    if (r.status === "rejected") {
+      console.error(`[test-purchase] notify[${i === 0 ? "admins" : "user"}]`, r.reason);
+    }
+  });
+
   return Response.json({ tickets: result.tickets, count: userRow.c + quantity });
 }
