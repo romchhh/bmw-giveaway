@@ -1,0 +1,53 @@
+# ─── Секрети та локальний конфіг ───
+.env
+.env.local
+.env.*.local
+**/.env
+
+# ─── SQLite (дані не в репозиторії) ───
+database/*.db
+database/*.db-wal
+database/*.db-shm
+*.db
+*.db-wal
+*.db-shm
+
+# ─── Next.js / Node (site/) ───
+site/node_modules/
+site/.next/
+site/out/
+site/.turbo/
+site/.vercel/
+site/npm-debug.log*
+site/yarn-error.log*
+site/pnpm-debug.log*
+
+# ─── Python (bot/) ───
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# ─── Тимчасові експорти бота ───
+bot/tickets_export_*
+bot/database_export.xlsx
+bot/*.xlsx
+
+# ─── ОС та IDE ───
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ─── Логи та кеш ───
+*.log
+.cache/
