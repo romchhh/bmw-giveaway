@@ -25,29 +25,14 @@ export function countTicketsForOrderReference(
   return row?.c ?? 0;
 }
 
-function parseAdministratorsEnv(): number[] {
-  const raw = process.env.ADMINISTRATORS?.trim();
-  if (!raw || raw.length < 2 || raw[0] !== "[" || raw[raw.length - 1] !== "]") {
-    return [];
-  }
-  return raw
-    .slice(1, -1)
-    .split(",")
-    .map((s) => parseInt(s.trim(), 10))
-    .filter((n) => Number.isFinite(n) && n > 0);
-}
+/** Група для сповіщень про оплати (супергрупа має id з мінусом). */
+const DEFAULT_PAYMENTS_NOTIFY_CHAT_ID = -1003622191100;
 
-function getAdminTelegramIds(db: Database.Database): number[] {
-  try {
-    const rows = db.prepare("SELECT user_id FROM admins").all() as { user_id: number }[];
-    const ids = [...new Set(rows.map((r) => Number(r.user_id)))].filter(
-      (n) => Number.isFinite(n) && n > 0,
-    );
-    if (ids.length) return ids;
-  } catch {
-    /* таблиці admins немає */
-  }
-  return parseAdministratorsEnv();
+function getPaymentsNotifyChatId(): number {
+  const raw = process.env.PAYMENTS_NOTIFY_CHAT_ID?.trim();
+  if (!raw) return DEFAULT_PAYMENTS_NOTIFY_CHAT_ID;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : DEFAULT_PAYMENTS_NOTIFY_CHAT_ID;
 }
 
 function escapeHtml(s: string): string {
@@ -111,7 +96,8 @@ export function formatPlisioPaymentMethodLine(
 }
 
 /**
- * Надсилає всім адмінам (таблиця admins у тій самій SQLite, інакше ADMINISTRATORS як у бота) повідомлення про оплату.
+ * Надсилає повідомлення про оплату в Telegram-групу (за замовчуванням та сама, що в коді / PAYMENTS_NOTIFY_CHAT_ID).
+ * Бот має бути в групі з правом надсилати повідомлення.
  * Помилки лише логуються — webhook не падає.
  */
 export async function notifyAdminsNewPayment(
@@ -124,11 +110,7 @@ export async function notifyAdminsNewPayment(
     return;
   }
 
-  const adminIds = getAdminTelegramIds(db);
-  if (!adminIds.length) {
-    console.warn("[notifyAdminsNewPayment] no admin recipients (admins table empty, ADMINISTRATORS unset)");
-    return;
-  }
+  const chatId = getPaymentsNotifyChatId();
 
   const providerLabel =
     payload.provider === "wayforpay"
@@ -173,25 +155,21 @@ export async function notifyAdminsNewPayment(
     `Сума: ${sumLine}\n` +
     `Замовлення: <code>${escapeHtml(payload.orderReference)}</code>`;
 
-  await Promise.allSettled(
-    adminIds.map(async (chatId) => {
-      const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text,
-          parse_mode: "HTML",
-          disable_web_page_preview: true,
-        }),
-      });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => "");
-        console.error(
-          `[notifyAdminsNewPayment] sendMessage failed chat_id=${chatId} status=${res.status}`,
-          errText.slice(0, 200),
-        );
-      }
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
     }),
-  );
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => "");
+    console.error(
+      `[notifyAdminsNewPayment] sendMessage failed chat_id=${chatId} status=${res.status}`,
+      errText.slice(0, 200),
+    );
+  }
 }

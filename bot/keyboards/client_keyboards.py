@@ -16,7 +16,7 @@ def get_subscribe_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [InlineKeyboardButton(text=channel_button_text(c1.title), url=c1.url)],
         [InlineKeyboardButton(text=channel_button_text(c2.title), url=c2.url)],
-        [InlineKeyboardButton(text="Перевірити підписку", callback_data="check_subscription")],
+        [InlineKeyboardButton(text="Перевірити підписки", callback_data="check_subscription")],
     ]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 

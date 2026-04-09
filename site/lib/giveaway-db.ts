@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS giveaway_checkouts (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_giveaway_checkouts_user ON giveaway_checkouts(user_id);
+
+CREATE TABLE IF NOT EXISTS giveaway_checkout_rate_limit (
+  user_id INTEGER PRIMARY KEY NOT NULL,
+  last_request_at INTEGER NOT NULL
+);
 `;
 
 let cached: Database.Database | null = null;

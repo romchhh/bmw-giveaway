@@ -2,7 +2,8 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import token
+from config import token, callback_flood_interval_sec
+from middlewares.callback_flood import CallbackFloodMiddleware
 
 
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +12,7 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=token)
 storage = MemoryStorage()
 dp = Dispatcher(bot=bot, storage=storage)
+dp.callback_query.middleware(CallbackFloodMiddleware(callback_flood_interval_sec))
 
 
 async def main():

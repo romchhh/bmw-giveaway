@@ -17,6 +17,7 @@ import {
   getTelegramUserIdFromInitData,
   validateTelegramWebAppInitData,
 } from "@/lib/telegram-init-data";
+import { tryBeginCheckoutWithinRateLimit } from "@/lib/checkout-rate-limit";
 
 function publicBaseUrl(): string {
   const u =
@@ -84,6 +85,18 @@ export async function POST(request: Request) {
   }
   if (soldRow.c + quantity > totalCap) {
     return Response.json({ error: "pool_exhausted", total: totalCap, sold: soldRow.c }, { status: 403 });
+  }
+
+  const rate = tryBeginCheckoutWithinRateLimit(db, userId);
+  if (!rate.ok) {
+    return Response.json(
+      {
+        error: "checkout_rate_limited",
+        retryAfterSec: rate.retryAfterSec,
+        message: "Зачекайте хвилину перед новим посиланням на оплату.",
+      },
+      { status: 429 },
+    );
   }
 
   const paymentTestMode = isPaymentTestMode();

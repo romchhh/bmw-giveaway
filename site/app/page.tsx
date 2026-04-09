@@ -168,7 +168,11 @@ function TicketProgress({ sold, total }: { sold: number; total: number }) {
         : Math.round(freePct * 10) / 10;
 
   return (
-    <div style={{ padding: `0 clamp(14px, 5vw, 24px)` }}>
+    <div
+      style={{
+        padding: `0 clamp(14px, 5vw, 24px) clamp(40px, 11vw, 72px)`,
+      }}
+    >
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
           <span style={s.statVal}>{pctLabel}%</span>
@@ -257,6 +261,8 @@ export default function GiveawayPage() {
   const [paymentTestMode, setPaymentTestMode] = useState(false);
   const [testCheckoutWayforpayUah, setTestCheckoutWayforpayUah] = useState(1);
   const [testCheckoutPlisioUsd, setTestCheckoutPlisioUsd] = useState(2);
+  /** tg / https посилання на менеджера — з .env MANAGER_CONTACT_URL */
+  const [managerContactUrl, setManagerContactUrl] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -314,8 +320,14 @@ export default function GiveawayPage() {
           paymentTestMode?: boolean;
           testCheckoutWayforpayUah?: number;
           testCheckoutPlisioUsd?: number;
+          managerContactUrl?: string | null;
         };
         if (cancelled) return;
+        if (typeof cfg.managerContactUrl === "string" && cfg.managerContactUrl.length > 0) {
+          setManagerContactUrl(cfg.managerContactUrl);
+        } else {
+          setManagerContactUrl(null);
+        }
         if (typeof cfg.ticketPriceUsd === "number" && cfg.ticketPriceUsd > 0) {
           setTicketPriceUsd(cfg.ticketPriceUsd);
         }
@@ -670,8 +682,8 @@ export default function GiveawayPage() {
         paddingTop: "calc(clamp(32px, 8vw, 48px) + env(safe-area-inset-top, 0px))",
         paddingBottom:
           canBuyMore
-            ? "calc(120px + env(safe-area-inset-bottom, 0px))"
-            : "calc(24px + env(safe-area-inset-bottom, 0px))",
+            ? "calc(188px + env(safe-area-inset-bottom, 0px))"
+            : "calc(48px + env(safe-area-inset-bottom, 0px))",
         boxSizing: "border-box",
       }}>
 
@@ -697,7 +709,17 @@ export default function GiveawayPage() {
 
           {/* Hero text */}
           <div style={{ padding: `clamp(12px, 3vw, 16px) ${gx} 0`, textAlign: "center", animation: "fadeUp 0.7s ease" }}>
-            <p style={{ ...s.eyebrow, marginBottom: 14 }}>2026 · BMW M Series · Giveaway</p>
+            <p style={{ ...s.eyebrow, marginBottom: 8 }}>2026 · BMW M Series · Giveaway</p>
+            <p style={{
+              fontSize: "clamp(12px, 3.2vw, 13px)",
+              fontWeight: 600,
+              color: th.textSoft,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              marginBottom: 14,
+            }}>
+              Як і казав Марко
+            </p>
             <h1 style={{
               fontSize: "clamp(1.65rem, 7.2vw, 2.125rem)",
               fontWeight: 800,
@@ -725,8 +747,10 @@ export default function GiveawayPage() {
               marginBottom: 16,
               padding: "0 clamp(0px, 2vw, 8px)",
             }}>
-              Від одного до десяти квитків — скільки візьмеш, вирішуєш ти.<br />
-              Переможець буде один. Трофей — теж один.
+              На одного учасника від одного до десяти квитків. У всіх шанси рівні, переможець один, трофей — також один.
+              <br />
+              <br />
+              Придбати квиток можна нижче 👇
             </p>
           </div>
 
@@ -1106,69 +1130,71 @@ export default function GiveawayPage() {
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    void (async () => {
-                      const init = window.Telegram?.WebApp?.initData;
-                      if (!init) {
-                        setPurchaseError("Тест доступний лише з Telegram (initData).");
-                        return;
-                      }
-                      setPurchaseLoading(true);
-                      setPurchaseError(null);
-                      try {
-                        const res = await fetch("/api/tickets/test-purchase", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            "x-telegram-init-data": init,
-                          },
-                          body: JSON.stringify({ quantity: tickets }),
-                        });
-                        const data = (await res.json()) as { error?: string };
-                        if (!res.ok) {
-                          if (data.error === "test_disabled") {
-                            setPurchaseError(
-                              "Тест оплати вимкнено на сервері. Додай у .env: PAYMENT_TEST_MODE=true",
-                            );
-                          } else {
-                            setPurchaseError(
-                              data.error === "user_cap"
-                                ? `Ліміт ${MAX_TICKETS} квитків.`
-                                : "Тест не вдався.",
-                            );
-                          }
+                {paymentTestMode && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void (async () => {
+                        const init = window.Telegram?.WebApp?.initData;
+                        if (!init) {
+                          setPurchaseError("Тест доступний лише з Telegram (initData).");
                           return;
                         }
-                        markRepostAfterPay();
-                        await refreshStatsAndMe(init);
-                      } catch {
-                        setPurchaseError("Помилка мережі.");
-                      } finally {
-                        setPurchaseLoading(false);
-                      }
-                    })();
-                  }}
-                  disabled={purchaseLoading}
-                  style={{
-                    width: "100%",
-                    marginTop: 14,
-                    padding: "12px 14px",
-                    borderRadius: 12,
-                    border: `1px dashed ${fm.payActiveBorder}`,
-                    background: "transparent",
-                    color: th.textFaint,
-                    cursor: purchaseLoading ? "wait" : "pointer",
-                    fontFamily: "'Montserrat', sans-serif",
-                    fontSize: 11,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    fontWeight: 600,
-                  }}
-                >
-                  Тест оплати
-                </button>
+                        setPurchaseLoading(true);
+                        setPurchaseError(null);
+                        try {
+                          const res = await fetch("/api/tickets/test-purchase", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              "x-telegram-init-data": init,
+                            },
+                            body: JSON.stringify({ quantity: tickets }),
+                          });
+                          const data = (await res.json()) as { error?: string };
+                          if (!res.ok) {
+                            if (data.error === "test_disabled") {
+                              setPurchaseError(
+                                "Тест оплати вимкнено на сервері. Додай у .env: PAYMENT_TEST_MODE=true",
+                              );
+                            } else {
+                              setPurchaseError(
+                                data.error === "user_cap"
+                                  ? `Ліміт ${MAX_TICKETS} квитків.`
+                                  : "Тест не вдався.",
+                              );
+                            }
+                            return;
+                          }
+                          markRepostAfterPay();
+                          await refreshStatsAndMe(init);
+                        } catch {
+                          setPurchaseError("Помилка мережі.");
+                        } finally {
+                          setPurchaseLoading(false);
+                        }
+                      })();
+                    }}
+                    disabled={purchaseLoading}
+                    style={{
+                      width: "100%",
+                      marginTop: 14,
+                      padding: "12px 14px",
+                      borderRadius: 12,
+                      border: `1px dashed ${fm.payActiveBorder}`,
+                      background: "transparent",
+                      color: th.textFaint,
+                      cursor: purchaseLoading ? "wait" : "pointer",
+                      fontFamily: "'Montserrat', sans-serif",
+                      fontSize: 11,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Тест оплати
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1239,9 +1265,9 @@ export default function GiveawayPage() {
           <div
             aria-hidden
             style={{
-              minHeight: "clamp(28px, 8vw, 44px)",
-              marginTop: 22,
-              padding: `0 ${gx} clamp(16px, 4vw, 20px)`,
+              minHeight: "clamp(40px, 11vw, 64px)",
+              marginTop: "clamp(28px, 6vw, 40px)",
+              padding: `0 ${gx} clamp(20px, 5vw, 28px)`,
               borderTop: `1px solid ${th.line}`,
             }}
           />
@@ -1386,9 +1412,17 @@ export default function GiveawayPage() {
                           invoiceUrl?: string;
                           wayforpayOpenUrl?: string;
                           details?: string;
+                          message?: string;
+                          retryAfterSec?: number;
                         };
                         if (!res.ok) {
-                          if (data.error === "user_cap") {
+                          if (data.error === "checkout_rate_limited") {
+                            const hint =
+                              typeof data.retryAfterSec === "number"
+                                ? ` Зачекайте ще ~${data.retryAfterSec} с.`
+                                : "";
+                            setPurchaseError((data.message ?? "Зачекайте.") + hint);
+                          } else if (data.error === "user_cap") {
                             setPurchaseError(`На одного учасника — не більше ${MAX_TICKETS} квитків.`);
                           } else if (data.error === "pool_exhausted") {
                             setPurchaseError("Усі квитки з пулу вже розібрані.");
@@ -1444,6 +1478,47 @@ export default function GiveawayPage() {
                   }}
                 >
                   {!ticketsFocus ? "Взяти участь →" : purchaseLoading ? "Зачекай…" : "Перейти до оплати"}
+                </button>
+              </div>
+              <div style={{ width: "100%", marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = managerContactUrl?.trim();
+                    if (url) {
+                      const tw = window.Telegram?.WebApp;
+                      if (tw?.openLink) {
+                        tw.openLink(url);
+                      } else {
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      }
+                    } else {
+                      const msg = "Посилання на менеджера зʼявиться згодом.";
+                      const tw = window.Telegram?.WebApp as { showAlert?: (t: string) => void } | undefined;
+                      if (typeof tw?.showAlert === "function") {
+                        tw.showAlert(msg);
+                      } else {
+                        window.alert(msg);
+                      }
+                    }
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    background: "transparent",
+                    color: th.textSoft,
+                    border: `1px solid ${th.lineStrong}`,
+                    borderRadius: 10,
+                    cursor: "pointer",
+                    fontFamily: "'Montserrat', sans-serif",
+                    fontSize: "clamp(10px, 2.8vw, 11px)",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    fontWeight: 600,
+                    transition: "opacity 0.2s, background 0.2s, border-color 0.2s",
+                  }}
+                >
+                  Звʼязатись з менеджером
                 </button>
               </div>
             </div>

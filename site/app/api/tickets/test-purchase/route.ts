@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   ]);
   settled.forEach((r, i) => {
     if (r.status === "rejected") {
-      console.error(`[test-purchase] notify[${i === 0 ? "admins" : "user"}]`, r.reason);
+      console.error(`[test-purchase] notify[${i === 0 ? "payments_group" : "user"}]`, r.reason);
     }
   });
 
