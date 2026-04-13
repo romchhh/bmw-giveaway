@@ -709,17 +709,7 @@ export default function GiveawayPage() {
 
           {/* Hero text */}
           <div style={{ padding: `clamp(12px, 3vw, 16px) ${gx} 0`, textAlign: "center", animation: "fadeUp 0.7s ease" }}>
-            <p style={{ ...s.eyebrow, marginBottom: 8 }}>2026 · BMW M Series · Giveaway</p>
-            <p style={{
-              fontSize: "clamp(12px, 3.2vw, 13px)",
-              fontWeight: 600,
-              color: th.textSoft,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              marginBottom: 14,
-            }}>
-              Як і казав Марко
-            </p>
+            <p style={{ ...s.eyebrow, marginBottom: 14 }}>2026 · BMW M Series · Giveaway</p>
             <h1 style={{
               fontSize: "clamp(1.65rem, 7.2vw, 2.125rem)",
               fontWeight: 800,
