@@ -23,8 +23,10 @@ CREATE TABLE IF NOT EXISTS giveaway_checkouts (
 CREATE INDEX IF NOT EXISTS idx_giveaway_checkouts_user ON giveaway_checkouts(user_id);
 
 CREATE TABLE IF NOT EXISTS giveaway_checkout_rate_limit (
-  user_id INTEGER PRIMARY KEY NOT NULL,
-  last_request_at INTEGER NOT NULL
+  user_id INTEGER NOT NULL,
+  provider TEXT NOT NULL,
+  last_request_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, provider)
 );
 `;
 
@@ -50,6 +52,41 @@ function migrateGiveawayDb(db: Database.Database): void {
 
   migrateGiveawayCheckoutsAmountUsd(db);
   migrateWayforpayBridgeColumns(db);
+  migrateCheckoutRateLimitByProvider(db);
+}
+
+/** Стара схема: один timestamp на user; нова — окремо plisio / wayforpay. */
+function migrateCheckoutRateLimitByProvider(db: Database.Database): void {
+  let cols: { name: string }[];
+  try {
+    cols = db.prepare("PRAGMA table_info(giveaway_checkout_rate_limit)").all() as { name: string }[];
+  } catch {
+    return;
+  }
+  if (cols.length === 0) return;
+  const names = new Set(cols.map((c) => c.name));
+  if (names.has("provider")) return;
+
+  try {
+    db.transaction(() => {
+      db.exec(`
+        CREATE TABLE giveaway_checkout_rate_limit_m (
+          user_id INTEGER NOT NULL,
+          provider TEXT NOT NULL,
+          last_request_at INTEGER NOT NULL,
+          PRIMARY KEY (user_id, provider)
+        );
+        INSERT INTO giveaway_checkout_rate_limit_m (user_id, provider, last_request_at)
+        SELECT user_id, 'plisio', last_request_at FROM giveaway_checkout_rate_limit;
+        INSERT INTO giveaway_checkout_rate_limit_m (user_id, provider, last_request_at)
+        SELECT user_id, 'wayforpay', last_request_at FROM giveaway_checkout_rate_limit;
+        DROP TABLE giveaway_checkout_rate_limit;
+        ALTER TABLE giveaway_checkout_rate_limit_m RENAME TO giveaway_checkout_rate_limit;
+      `);
+    })();
+  } catch (e) {
+    console.error("[giveaway-db] migrateCheckoutRateLimitByProvider failed", e);
+  }
 }
 
 /** Поля POST на secure.wayforpay.com/pay (GET на /pay дає Bad Request). */

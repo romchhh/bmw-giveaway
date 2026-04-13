@@ -87,13 +87,17 @@ export async function POST(request: Request) {
     return Response.json({ error: "pool_exhausted", total: totalCap, sold: soldRow.c }, { status: 403 });
   }
 
-  const rate = tryBeginCheckoutWithinRateLimit(db, userId);
+  const rate = tryBeginCheckoutWithinRateLimit(db, userId, provider);
   if (!rate.ok) {
+    const hint =
+      provider === "plisio"
+        ? "Зачекайте перед новим рахунком у крипті."
+        : "Зачекайте перед новим посиланням WayForPay.";
     return Response.json(
       {
         error: "checkout_rate_limited",
         retryAfterSec: rate.retryAfterSec,
-        message: "Зачекайте хвилину перед новим посиланням на оплату.",
+        message: hint,
       },
       { status: 429 },
     );
