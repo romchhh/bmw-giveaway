@@ -41,18 +41,3 @@ def _positive_int_env(key: str, default: int) -> int:
 
 # Загальний пул квитків (як у мінідодатку / GIVEAWAY_TOTAL_TICKETS)
 giveaway_total_tickets = _positive_int_env("GIVEAWAY_TOTAL_TICKETS", 10_000)
-
-
-def _positive_float_env(key: str, default: float) -> float:
-    raw = (getenv(key) or "").strip()
-    if not raw:
-        return default
-    try:
-        v = float(raw.replace(",", "."))
-        return v if v > 0 else default
-    except ValueError:
-        return default
-
-
-# Мінімальний інтервал (сек) між натисканнями inline-кнопок на одного користувача
-callback_flood_interval_sec = _positive_float_env("CALLBACK_FLOOD_INTERVAL_SEC", 0.7)
