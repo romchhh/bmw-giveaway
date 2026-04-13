@@ -41,3 +41,19 @@ def _positive_int_env(key: str, default: int) -> int:
 
 # Загальний пул квитків (як у мінідодатку / GIVEAWAY_TOTAL_TICKETS)
 giveaway_total_tickets = _positive_int_env("GIVEAWAY_TOTAL_TICKETS", 10_000)
+
+
+def _positive_float_env(key: str, default: float) -> float:
+    raw = (getenv(key) or "").strip()
+    if not raw:
+        return default
+    try:
+        v = float(raw.replace(",", "."))
+        return v if v > 0 else default
+    except ValueError:
+        return default
+
+
+# /start і inline-кнопки — спільний скользячий ліміт (за замовч. 5 дій за 60 с)
+bot_flood_max_actions = _positive_int_env("BOT_FLOOD_MAX_ACTIONS", 5)
+bot_flood_window_sec = _positive_float_env("BOT_FLOOD_WINDOW_SEC", 60.0)

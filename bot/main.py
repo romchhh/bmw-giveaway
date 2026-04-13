@@ -2,7 +2,8 @@ import asyncio
 import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from config import token
+from config import bot_flood_max_actions, bot_flood_window_sec, token
+from middlewares.flood_throttle import ActionRateLimiter, FloodThrottleMiddleware
 
 
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +12,10 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=token)
 storage = MemoryStorage()
 dp = Dispatcher(bot=bot, storage=storage)
+
+_flood_limiter = ActionRateLimiter(bot_flood_max_actions, bot_flood_window_sec)
+dp.message.middleware(FloodThrottleMiddleware(_flood_limiter, "start"))
+dp.callback_query.middleware(FloodThrottleMiddleware(_flood_limiter, "callback"))
 
 
 async def main():
