@@ -10,7 +10,7 @@ export async function GET() {
   const managerContactUrl =
     process.env.MANAGER_CONTACT_URL?.trim() ||
     process.env.NEXT_PUBLIC_MANAGER_CONTACT_URL?.trim() ||
-    null;
+    "https://t.me/doma1nss";
   return Response.json({
     ticketPriceUsd: getTicketPriceUsd(),
     paymentTestMode,

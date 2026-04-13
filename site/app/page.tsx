@@ -261,7 +261,7 @@ export default function GiveawayPage() {
   const [paymentTestMode, setPaymentTestMode] = useState(false);
   const [testCheckoutWayforpayUah, setTestCheckoutWayforpayUah] = useState(1);
   const [testCheckoutPlisioUsd, setTestCheckoutPlisioUsd] = useState(2);
-  /** tg / https посилання на менеджера — з .env MANAGER_CONTACT_URL */
+  /** Підтримка / менеджер: .env MANAGER_CONTACT_URL або дефолт t.me/doma1nss з API */
   const [managerContactUrl, setManagerContactUrl] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
