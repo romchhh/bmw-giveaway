@@ -39,6 +39,19 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function getTicketCodesForOrder(db: Database.Database, orderReference: string): string[] {
+  try {
+    const rows = db
+      .prepare(
+        `SELECT code FROM giveaway_tickets WHERE order_reference = ? ORDER BY id ASC`,
+      )
+      .all(orderReference) as { code: string }[];
+    return rows.map((r) => r.code.trim()).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 type BuyerRow = {
   user_name: string | null;
   user_first_name: string | null;
@@ -136,6 +149,12 @@ export async function notifyAdminsNewPayment(
   const methodLine =
     payload.paymentMethodLine?.trim() || defaultPaymentMethodLine(payload.provider);
 
+  const ticketCodes = getTicketCodesForOrder(db, payload.orderReference);
+  const ticketsBlock =
+    ticketCodes.length > 0
+      ? `\n\n🎫 <b>Номери квитків</b>\n${ticketCodes.map((c) => `<code>${escapeHtml(c)}</code>`).join("\n")}`
+      : `\n\n🎫 <b>Номери квитків:</b> <i>не знайдено в БД</i>`;
+
   const clientBlock =
     `👤 <b>Клієнт</b>\n` +
     `ID: <code>${payload.userId}</code>\n` +
@@ -153,7 +172,8 @@ export async function notifyAdminsNewPayment(
     `Спосіб оплати: ${escapeHtml(methodLine)}\n` +
     `Кількість квитків: <b>${payload.quantity}</b>\n` +
     `Сума: ${sumLine}\n` +
-    `Замовлення: <code>${escapeHtml(payload.orderReference)}</code>`;
+    `Замовлення: <code>${escapeHtml(payload.orderReference)}</code>` +
+    ticketsBlock;
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",
