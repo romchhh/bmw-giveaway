@@ -40,7 +40,7 @@ def _positive_int_env(key: str, default: int) -> int:
 
 
 # Загальний пул квитків (як у мінідодатку / GIVEAWAY_TOTAL_TICKETS)
-giveaway_total_tickets = _positive_int_env("GIVEAWAY_TOTAL_TICKETS", 10_000)
+giveaway_total_tickets = _positive_int_env("GIVEAWAY_TOTAL_TICKETS", 777)
 
 
 def _positive_float_env(key: str, default: float) -> float:

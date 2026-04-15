@@ -9,7 +9,7 @@ const GIVEAWAY_POST_URL =
 const DEFAULT_TICKET_USD = Number(process.env.NEXT_PUBLIC_TICKET_PRICE_USD ?? "99");
 const MAX_TICKETS = 10;
 /** Лише fallback для прогрес-бару до відповіді API */
-const POOL_TOTAL_FALLBACK = 10_000;
+const POOL_TOTAL_FALLBACK = 777;
 
 /** Темний фон + трохи золота лише як акцент */
 const th = {
@@ -240,7 +240,8 @@ const s = {
 // ─── Main component ───────────────────────────────────────────
 export default function GiveawayPage() {
   const [tickets, setTickets] = useState(1);
-  const [pay, setPay] = useState<PayMethod>("card");
+  /** До першого вибору картка/крипта — null, щоб «Перейти до оплату» спочатку вимагав вибір */
+  const [pay, setPay] = useState<PayMethod | null>(null);
   /** Після скролу до квитків або кліку «Взяти участь» — показуємо підсумок і «Оплатити» */
   const [ticketsFocus, setTicketsFocus] = useState(false);
   const ticketsFormRef = useRef<HTMLDivElement>(null);
@@ -1084,7 +1085,10 @@ export default function GiveawayPage() {
                     <button
                       className="gw-pay"
                       type="button"
-                      onClick={() => setPay(method)}
+                      onClick={() => {
+                        setPay(method);
+                        setCheckoutHint(null);
+                      }}
                       style={{
                         width: "100%",
                         padding: "12px 10px",
@@ -1376,6 +1380,13 @@ export default function GiveawayPage() {
                       setTicketsFocus(true);
                       return;
                     }
+                    if (pay === null) {
+                      setPurchaseError(null);
+                      setCheckoutHint("Спочатку обери спосіб оплати: картка або крипта.");
+                      ticketsFormRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      return;
+                    }
+                    const payMethod = pay;
                     void (async () => {
                       const init = window.Telegram?.WebApp?.initData;
                       if (!init) {
@@ -1387,7 +1398,7 @@ export default function GiveawayPage() {
                       setCheckoutHint(null);
                       const countBefore = myTickets.length;
                       try {
-                        const provider = pay === "crypto" ? "plisio" : "wayforpay";
+                        const provider = payMethod === "crypto" ? "plisio" : "wayforpay";
                         const res = await fetch("/api/tickets/checkout", {
                           method: "POST",
                           headers: {

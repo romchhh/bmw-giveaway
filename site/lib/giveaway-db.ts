@@ -146,8 +146,8 @@ export function getGiveawayDb(): Database.Database {
 }
 
 export function getGiveawayTotalCap(): number {
-  const n = Number.parseInt(process.env.GIVEAWAY_TOTAL_TICKETS ?? "10000", 10);
-  return Number.isFinite(n) && n > 0 ? n : 10_000;
+  const n = Number.parseInt(process.env.GIVEAWAY_TOTAL_TICKETS ?? "777", 10);
+  return Number.isFinite(n) && n > 0 ? n : 777;
 }
 
 export const MAX_TICKETS_PER_USER = 10;
