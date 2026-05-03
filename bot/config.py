@@ -24,7 +24,10 @@ def _optional_channel_id(key: str) -> Optional[int]:
 channel_1_id = _optional_channel_id('CHANNEL_1_ID')
 channel_2_id = _optional_channel_id('CHANNEL_2_ID')
 
-giveaway_post_url = getenv('GIVEAWAY_POST_URL', 'https://t.me/your_channel/123')
+giveaway_post_url = getenv(
+    'GIVEAWAY_POST_URL',
+    'https://www.instagram.com/p/DXywjTEiDcY/?igsh=Ymx1MHNzbW5wN3kw',
+)
 mini_app_url = getenv('MINI_APP_URL', 'https://t.me/your_bot/app')
 
 

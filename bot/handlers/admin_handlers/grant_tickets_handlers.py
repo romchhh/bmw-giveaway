@@ -15,6 +15,7 @@ from keyboards.admin_keyboards import admin_keyboard
 from main import bot
 from states.admin_states import GrantTickets
 from utils.filters import IsAdmin
+from utils.notify_payments_group import notify_payments_chat_manual_grant
 
 router = Router()
 
@@ -252,6 +253,14 @@ async def grant_apply(callback: types.CallbackQuery, state: FSMContext):
     codes = result.get("codes") or []
     if not result.get("idempotent"):
         await _send_user_grant_message(uid, codes)
+        await notify_payments_chat_manual_grant(
+            bot,
+            target_user_id=uid,
+            quantity=len(codes),
+            codes=codes,
+            order_reference=order_ref,
+            admin_from=callback.from_user,
+        )
 
     codes_line = ", ".join(codes)
     await callback.message.answer(

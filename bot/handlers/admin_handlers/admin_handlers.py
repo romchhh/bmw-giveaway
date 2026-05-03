@@ -28,6 +28,7 @@ async def admin_panel(message: types.Message):
 
 @router.message(IsAdmin(), F.text.in_(["Головне меню"]))
 async def go_home(message: types.Message, state: FSMContext):
+    await state.clear()
     from Content.texts import get_welcome_text
     from keyboards.client_keyboards import get_enter_giveaway_keyboard
     await message.answer(get_welcome_text(), parse_mode="HTML", reply_markup=get_enter_giveaway_keyboard())

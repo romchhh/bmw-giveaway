@@ -25,10 +25,12 @@ export async function notifyUserPaymentSuccess(params: {
     process.env.PUBLIC_URL?.trim() ||
     "";
 
+  const defaultRepost =
+    "https://www.instagram.com/p/DXywjTEiDcY/?igsh=Ymx1MHNzbW5wN3kw";
   const repostPostUrl =
     process.env.GIVEAWAY_POST_URL?.trim() ||
     process.env.NEXT_PUBLIC_GIVEAWAY_POST_URL?.trim() ||
-    "";
+    defaultRepost;
 
   const { userId, tickets } = params;
 

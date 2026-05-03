@@ -29,4 +29,11 @@ class MenuEdit(StatesGroup):
 class GrantTickets(StatesGroup):
     waiting_identifier = State()
     confirm_pending = State()
+
+
+class DirectMessage(StatesGroup):
+    """Повідомлення користувачу за Telegram ID (наприклад, після повернення WayForPay)."""
+    waiting_user_id = State()
+    waiting_text = State()
+    confirm_send = State()
     

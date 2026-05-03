@@ -3,8 +3,10 @@
 import { useState, useEffect, useRef } from "react";
 
 // ─── Constants ────────────────────────────────────────────────
+const DEFAULT_GIVEAWAY_REPOST_URL =
+  "https://www.instagram.com/p/DXywjTEiDcY/?igsh=Ymx1MHNzbW5wN3kw";
 const GIVEAWAY_POST_URL =
-  process.env.NEXT_PUBLIC_GIVEAWAY_POST_URL ?? "https://t.me/your_channel/123";
+  process.env.NEXT_PUBLIC_GIVEAWAY_POST_URL ?? DEFAULT_GIVEAWAY_REPOST_URL;
 
 /** Оплата карткою — відкриває чат менеджера з готовим текстом (можна перевизначити в .env). */
 const CARD_PAY_TELEGRAM_BASE = (
@@ -395,7 +397,7 @@ export default function GiveawayPage() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    async function pullStats() {
       try {
         const res = await fetch("/api/tickets/stats", { cache: "no-store" });
         const data = (await res.json()) as { sold?: number; total?: number };
@@ -408,9 +410,14 @@ export default function GiveawayPage() {
           setStatsTotal(POOL_TOTAL_FALLBACK);
         }
       }
-    })();
+    }
+    void pullStats();
+    const interval = window.setInterval(() => {
+      void pullStats();
+    }, 25_000);
     return () => {
       cancelled = true;
+      window.clearInterval(interval);
     };
   }, []);
 
