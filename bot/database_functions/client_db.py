@@ -1,3 +1,4 @@
+import re
 import sqlite3
 from datetime import datetime
 
@@ -75,6 +76,35 @@ def get_user_id_by_username(username: str):
     cursor.execute("SELECT user_id FROM users WHERE user_name = ?", (username,))
     result = cursor.fetchone()
     return result[0] if result else None
+
+
+def resolve_telegram_user_identifier(raw: str):
+    """
+    Повертає (user_id, None) або (None, текст_помилки).
+    Числовий ID приймаємо завжди. За @username шукаємо лише в таблиці users (реєстрація /start).
+    """
+    t = (raw or "").strip()
+    if not t:
+        return None, "Порожнє повідомлення."
+    if re.fullmatch(r"[0-9]{1,15}", t):
+        uid = int(t)
+        if uid <= 0:
+            return None, "Некоректний Telegram ID."
+        return uid, None
+    uname = t.lstrip("@").strip()
+    if not uname:
+        return None, "Надішли @username або числовий Telegram ID."
+    cursor.execute(
+        "SELECT user_id FROM users WHERE LOWER(user_name) = LOWER(?)",
+        (uname,),
+    )
+    row = cursor.fetchone()
+    if row:
+        return int(row[0]), None
+    return (
+        None,
+        "Користувача з таким username не знайдено. Нехай спочатку натисне /start у боті.",
+    )
 
 
 def get_username_by_user_id(user_id: str):

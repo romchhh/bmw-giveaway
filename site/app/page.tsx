@@ -6,6 +6,49 @@ import { useState, useEffect, useRef } from "react";
 const GIVEAWAY_POST_URL =
   process.env.NEXT_PUBLIC_GIVEAWAY_POST_URL ?? "https://t.me/your_channel/123";
 
+/** Оплата карткою — відкриває чат менеджера з готовим текстом (можна перевизначити в .env). */
+const CARD_PAY_TELEGRAM_BASE = (
+  process.env.NEXT_PUBLIC_CARD_PAY_TELEGRAM_URL ?? "https://t.me/doma1nss"
+).replace(/\/$/, "");
+
+function uaTicketsWord(n: number): string {
+  const k = Math.abs(n) % 10;
+  const l = Math.abs(n) % 100;
+  if (k === 1 && l !== 11) return "квиток";
+  if (k >= 2 && k <= 4 && (l < 12 || l > 14)) return "квитки";
+  return "квитків";
+}
+
+function buildCardPayTelegramUrl(quantity: number): string {
+  const w = uaTicketsWord(quantity);
+  const text =
+    `Привіт! Хочу взяти участь у розіграші BMW M4 і оплатити карткою ${quantity} ${w}. Підкажіть, будь ласка, як оформити оплату.`;
+  return `${CARD_PAY_TELEGRAM_BASE}?text=${encodeURIComponent(text)}`;
+}
+
+type TelegramWebAppBridge = NonNullable<typeof window.Telegram>["WebApp"];
+
+/** Посилання на t.me / telegram.me — відкриває всередині клієнта Telegram, не в зовнішньому браузері. */
+function openInsideTelegram(tw: TelegramWebAppBridge | undefined, url: string): void {
+  let isTgDeep = false;
+  try {
+    const u = new URL(url);
+    isTgDeep = u.hostname === "t.me" || u.hostname === "telegram.me";
+  } catch {
+    isTgDeep = /^https?:\/\/(t\.me|telegram\.me)\b/i.test(url);
+  }
+  const ext = tw as TelegramWebAppBridge & { openTelegramLink?: (u: string) => void };
+  if (isTgDeep && typeof ext?.openTelegramLink === "function") {
+    ext.openTelegramLink(url);
+    return;
+  }
+  if (tw?.openLink) {
+    tw.openLink(url);
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 const DEFAULT_TICKET_USD = Number(process.env.NEXT_PUBLIC_TICKET_PRICE_USD ?? "99");
 const MAX_TICKETS = 10;
 /** Лише fallback для прогрес-бару до відповіді API */
@@ -931,8 +974,7 @@ export default function GiveawayPage() {
                       type="button"
                       onClick={() => {
                         const tw = window.Telegram?.WebApp;
-                        if (tw?.openLink) tw.openLink(GIVEAWAY_POST_URL);
-                        else window.open(GIVEAWAY_POST_URL, "_blank", "noopener,noreferrer");
+                        openInsideTelegram(tw, GIVEAWAY_POST_URL);
                       }}
                       style={{
                         width: "100%",
@@ -1396,9 +1438,16 @@ export default function GiveawayPage() {
                       setPurchaseLoading(true);
                       setPurchaseError(null);
                       setCheckoutHint(null);
-                      const countBefore = myTickets.length;
                       try {
-                        const provider = payMethod === "crypto" ? "plisio" : "wayforpay";
+                        if (payMethod === "card") {
+                          const payUrl = buildCardPayTelegramUrl(tickets);
+                          const tw = window.Telegram?.WebApp;
+                          openInsideTelegram(tw, payUrl);
+                          setTimeout(() => tw?.close?.(), 300);
+                          return;
+                        }
+
+                        const provider = "plisio";
                         const res = await fetch("/api/tickets/checkout", {
                           method: "POST",
                           headers: {
@@ -1444,15 +1493,6 @@ export default function GiveawayPage() {
                             window.open(data.invoiceUrl, "_blank", "noopener,noreferrer");
                           }
                           setTimeout(() => tw?.close?.(), 300);
-                        } else if (data.provider === "wayforpay" && data.wayforpayOpenUrl) {
-                          const tw = window.Telegram?.WebApp;
-                          const payUrl = data.wayforpayOpenUrl;
-                          if (tw?.openLink) {
-                            tw.openLink(payUrl);
-                          } else {
-                            window.open(payUrl, "_blank", "noopener,noreferrer");
-                          }
-                          setTimeout(() => tw?.close?.(), 300);
                         }
                       } catch {
                         setPurchaseError("Помилка мережі. Перевір з’єднання й спробуй знову.");
@@ -1488,11 +1528,7 @@ export default function GiveawayPage() {
                     const url = managerContactUrl?.trim();
                     if (url) {
                       const tw = window.Telegram?.WebApp;
-                      if (tw?.openLink) {
-                        tw.openLink(url);
-                      } else {
-                        window.open(url, "_blank", "noopener,noreferrer");
-                      }
+                      openInsideTelegram(tw, url);
                     } else {
                       const msg = "Посилання на менеджера зʼявиться згодом.";
                       const tw = window.Telegram?.WebApp as { showAlert?: (t: string) => void } | undefined;

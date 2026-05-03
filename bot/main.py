@@ -24,8 +24,10 @@ async def main():
     from handlers.admin_handlers.mailing_handlers import router as mailing_router
     from handlers.admin_handlers.links_handlers import router as links_router
     from handlers.admin_handlers.admin_management_handlers import router as admin_management_router
+    from handlers.admin_handlers.grant_tickets_handlers import router as grant_tickets_router
     dp.include_router(client_router)
     dp.include_router(admin_router)
+    dp.include_router(grant_tickets_router)
     dp.include_router(mailing_router)
     dp.include_router(links_router)
     dp.include_router(admin_management_router)

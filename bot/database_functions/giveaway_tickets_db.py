@@ -1,7 +1,11 @@
+import secrets
 import sqlite3
-from typing import Any, List, Tuple
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Tuple
 
 from database_functions.db_path import DATABASE_PATH
+
+MAX_TICKETS_PER_USER = 10
 
 
 def create_giveaway_tickets_table():
@@ -119,3 +123,89 @@ def get_all_tickets_for_export() -> Tuple[List[Tuple[Any, ...]], List[str]]:
     conn.close()
     columns = ["id", "user_id", "username", "code", "created_at"]
     return rows, columns
+
+
+def _giveaway_total_cap() -> int:
+    from config import giveaway_total_tickets
+
+    return int(giveaway_total_tickets)
+
+
+def _random_six_digit_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def admin_fulfill_tickets(
+    target_user_id: int,
+    quantity: int,
+    order_reference: str,
+) -> Dict[str, Any]:
+    """
+    Нарахувати квитки як у мінідодатку (6-значні коди, order_reference, ліміти пулу та на юзера).
+    Ідемпотентно за order_reference.
+    """
+    if not isinstance(quantity, int) or quantity < 1 or quantity > MAX_TICKETS_PER_USER:
+        return {"ok": False, "error": "bad_quantity"}
+
+    conn = sqlite3.connect(DATABASE_PATH)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT code FROM giveaway_tickets WHERE order_reference = ? ORDER BY id ASC",
+            (order_reference,),
+        )
+        existing = [r[0] for r in cur.fetchall()]
+        if existing:
+            return {"ok": True, "codes": existing, "idempotent": True}
+
+        cur.execute("SELECT COUNT(*) FROM giveaway_tickets")
+        sold = int(cur.fetchone()[0])
+        cur.execute(
+            "SELECT COUNT(*) FROM giveaway_tickets WHERE user_id = ?",
+            (target_user_id,),
+        )
+        user_cnt = int(cur.fetchone()[0])
+        cap = _giveaway_total_cap()
+
+        if user_cnt + quantity > MAX_TICKETS_PER_USER:
+            return {"ok": False, "error": "user_cap"}
+        if sold + quantity > cap:
+            return {"ok": False, "error": "pool_exhausted"}
+
+        created_at = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="milliseconds")
+            .replace("+00:00", "Z")
+        )
+        codes: List[str] = []
+
+        cur.execute("BEGIN IMMEDIATE")
+        try:
+            for _ in range(quantity):
+                inserted = False
+                for _attempt in range(100):
+                    code = _random_six_digit_code()
+                    try:
+                        cur.execute(
+                            """
+                            INSERT INTO giveaway_tickets (user_id, code, created_at, order_reference)
+                            VALUES (?, ?, ?, ?)
+                            """,
+                            (target_user_id, code, created_at, order_reference),
+                        )
+                        codes.append(code)
+                        inserted = True
+                        break
+                    except sqlite3.IntegrityError:
+                        continue
+                if not inserted:
+                    cur.execute("ROLLBACK")
+                    return {"ok": False, "error": "server"}
+            cur.execute("COMMIT")
+        except Exception:
+            cur.execute("ROLLBACK")
+            raise
+
+        return {"ok": True, "codes": codes, "idempotent": False}
+    finally:
+        conn.close()

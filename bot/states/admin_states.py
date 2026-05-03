@@ -24,4 +24,9 @@ class MenuEdit(StatesGroup):
     media = State()
     description = State()
     url_buttons = State()
+
+
+class GrantTickets(StatesGroup):
+    waiting_identifier = State()
+    confirm_pending = State()
     

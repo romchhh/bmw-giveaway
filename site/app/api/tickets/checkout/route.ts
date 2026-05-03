@@ -236,7 +236,7 @@ export async function POST(request: Request) {
   paymentData["productName[0]"] = productNames[0];
   paymentData["productCount[0]"] = productCounts[0];
   paymentData["productPrice[0]"] = productPrices[0].toFixed(2);
-  paymentData.returnUrl = `${base}/payment-success`;
+  paymentData.returnUrl = `${base}/api/wayforpay/return`;
   paymentData.serviceUrl = `${base}/api/wayforpay/webhook`;
 
   const bridgeToken = randomBytes(32).toString("hex");
