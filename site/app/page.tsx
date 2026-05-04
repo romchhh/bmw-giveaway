@@ -188,29 +188,20 @@ const CAR_SPECS: { val: string; label: string; icon: SpecIconId; valPx?: number 
   { val: "Active M", label: "диференціал", icon: "diff", valPx: 14 },
 ];
 
+/** Відсоток для підпису: один знак після коми (десяті). */
+function formatPoolPercent(percent: number): string {
+  const x = Math.min(100, Math.max(0, percent));
+  return (Math.round(x * 10) / 10).toFixed(1);
+}
+
 // ─── Progress bar ─────────────────────────────────────────────
 function TicketProgress({ sold, total }: { sold: number; total: number }) {
   const safeTotal = total > 0 ? total : 1;
   const ratio = Math.min(1, sold / safeTotal);
-  /** Ширина смуги — точна частка (0.47%), не Math.round, інакше при великому пулі смуга не рухається. */
+  /** Ширина смуги — точна частка, не Math.round, інакше при великому пулі смуга не рухається. */
   const fillPct = ratio * 100;
-  const pctLabel =
-    ratio === 0
-      ? 0
-      : ratio < 0.001
-        ? Math.round(ratio * 100000) / 1000
-        : ratio < 0.01
-          ? Math.round(ratio * 10000) / 100
-          : ratio < 0.1
-            ? Math.round(ratio * 1000) / 10
-            : Math.round(ratio * 100);
-  const freePct = (1 - ratio) * 100;
-  const freeLabel =
-    ratio >= 1
-      ? 0
-      : freePct >= 10
-        ? Math.round(freePct)
-        : Math.round(freePct * 10) / 10;
+  const soldPctLabel = formatPoolPercent(ratio * 100);
+  const freePctLabel = formatPoolPercent((1 - ratio) * 100);
 
   return (
     <div
@@ -220,11 +211,11 @@ function TicketProgress({ sold, total }: { sold: number; total: number }) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
-          <span style={s.statVal}>{pctLabel}%</span>
+          <span style={s.statVal}>{soldPctLabel}%</span>
           <span style={s.statLabel}> пулу</span>
         </div>
         <div style={{ textAlign: "right" }}>
-          <span style={s.statVal}>{freeLabel}%</span>
+          <span style={s.statVal}>{freePctLabel}%</span>
           <span style={s.statLabel}> вільно</span>
         </div>
       </div>
